@@ -1,10 +1,30 @@
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
-#RUN sed -i 's/http:\/\/archive.ubuntu.com\/ubuntu\//https:\/\/archive.ubuntu.com\/ubuntu\//g' /etc/apt/sources.list
-RUN sed -i 's/http:\/\/archive.ubuntu.com\//http:\/\/us.archive.ubuntu.com\//g' /etc/apt/sources.list
-RUN apt-get update -y && apt-get install -y apache2
-RUN apt-get install -y php libapache2-mod-php
+
+# Use a working mirror
+RUN sed -i 's|http://archive.ubuntu.com/|http://us.archive.ubuntu.com/|g' /etc/apt/sources.list
+
+# Install Apache and PHP
+RUN apt-get update -y && apt-get install -y apache2 php libapache2-mod-php
+
+# Enable Apache mods
+RUN a2enmod rewrite
+
+# Copy your Apache virtual host config
 COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
-ADD . /var/www/html/
+
+# Create the directory your Apache config expects
+RUN mkdir -p /var/www/html/phpstatic
+
+# Copy project files into the correct document root
+COPY . /var/www/html/phpstatic/
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/phpstatic \
+    && chmod -R 755 /var/www/html/phpstatic
+
+# Expose port
 EXPOSE 80
-ENTRYPOINT apachectl -D FOREGROUND
+
+# Start Apache in foreground
+ENTRYPOINT ["apachectl", "-D", "FOREGROUND"]
